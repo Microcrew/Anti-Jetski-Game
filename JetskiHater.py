@@ -120,10 +120,10 @@ class App:
         for i in range(-spawn_margin, theApp.width + spawn_margin):
             spawn_points.append((i, theApp.height+spawn_margin))
 
-        for i in range(-spawn_margin, theApp.width + spawn_margin):
+        for i in range(-spawn_margin, theApp.height + spawn_margin):
             spawn_points.append((-spawn_margin, i))
 
-        for i in range(-spawn_margin, theApp.width + spawn_margin):
+        for i in range(-spawn_margin, theApp.height + spawn_margin):
             spawn_points.append((theApp.height+spawn_margin, i))
         #All possible spawnpoints added
 
