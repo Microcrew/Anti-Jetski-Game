@@ -8,10 +8,14 @@ import math
 game_objects = []
 bullets = []
 
-bullet_speed = 0.2
-turn_speed = 0.3
+fps = 60
+fps_clock = pygame.time.Clock()
+
+bullet_speed = 4
+turn_speed = 2
 spawn_margin = 10
 clip_size = 5
+refill_rate = 100
 
 
 
@@ -104,6 +108,25 @@ class App:
         game_objects.append(player)
 
         pygame.display.set_caption("JetskiHater")
+
+
+        #Add all possible enemy spawnpoints into one array
+        #This could be made into separate function to look neat
+        spawn_points = []
+        
+        for i in range(-spawn_margin, theApp.width + spawn_margin):
+            spawn_points.append((i, -spawn_margin))
+            
+        for i in range(-spawn_margin, theApp.width + spawn_margin):
+            spawn_points.append((i, theApp.height+spawn_margin))
+
+        for i in range(-spawn_margin, theApp.width + spawn_margin):
+            spawn_points.append((-spawn_margin, i))
+
+        for i in range(-spawn_margin, theApp.width + spawn_margin):
+            spawn_points.append((theApp.height+spawn_margin, i))
+        #All possible spawnpoints added
+
         
         ammo_regen = 0
         
@@ -113,12 +136,13 @@ class App:
             self.key_check()
             self.move_bullets()
             
-            if ammo_regen == 1000:
+            if ammo_regen == refill_rate:
                 player.add_ammo()
                 ammo_regen = 0
                 
             self.on_loop()
             self.on_render()
+            fps_clock.tick(fps)
             
             ammo_regen += 1
             
@@ -168,7 +192,7 @@ class Player(Game_Object):
         
 
     def turn_right(self):
-        self.rotation += turn_speed
+        self.rotation -= turn_speed
         if self.rotation > 360:
             self.rotation = self.rotation - 360
 
@@ -181,7 +205,7 @@ class Player(Game_Object):
         self.rect = new_rect
 
     def turn_left(self):
-        self.rotation -= turn_speed
+        self.rotation += turn_speed
         if self.rotation > 360:
             self.rotation = self.rotation - 360
 
