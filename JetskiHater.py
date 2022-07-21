@@ -1,12 +1,14 @@
 import pygame
 from pygame.locals import *
 import math
+import random
 
 
 
 
 game_objects = []
 bullets = []
+jetskis = []
 
 fps = 60
 fps_clock = pygame.time.Clock()
@@ -16,10 +18,39 @@ turn_speed = 2
 spawn_margin = 10
 clip_size = 5
 refill_rate = 100
+spawn_rate = 200
+player_hitbox = 10
 
 
+score = 0
+jetski_speed = (100 + score)/10
 
 
+def generate_spawnpoints():
+    spawn_points = []
+        
+    for i in range(-spawn_margin, theApp.width + spawn_margin):
+        spawn_points.append((i, -spawn_margin))
+            
+    for i in range(-spawn_margin, theApp.width + spawn_margin):
+        spawn_points.append((i, theApp.height+spawn_margin))
+
+    for i in range(-spawn_margin, theApp.height + spawn_margin):
+        spawn_points.append((-spawn_margin, i))
+
+    for i in range(-spawn_margin, theApp.height + spawn_margin):
+        spawn_points.append((theApp.width+spawn_margin, i))
+
+    return spawn_points
+
+
+def spawn_jetski(spawn_points, speed):
+    array_place = random.randint(0, len(spawn_points)-1)
+    new_jetski = Jetski(spawn_points[array_place][0], spawn_points[array_place][1], theApp, speed)
+    jetskis.append(new_jetski)
+    game_objects.append(new_jetski)
+    
+    
 
  
 class App:
@@ -61,12 +92,18 @@ class App:
 
 
 
-    def move_bullets(self):
-        for item in bullets:
-            item.travel()
-            if (item.getX() < -spawn_margin or item.getX() > theApp.width + spawn_margin or item.getY() < -spawn_margin or item.getY() > theApp.height + spawn_margin):
-                game_objects.remove(item)
-                bullets.remove(item)
+    def move_items(self):
+        for bullet in bullets:
+            bullet.travel()
+            if (bullet.getX() < -spawn_margin or bullet.getX() > theApp.width + spawn_margin or bullet.getY() < -spawn_margin or bullet.getY() > theApp.height + spawn_margin):
+                game_objects.remove(bullet)
+                bullets.remove(bullet)
+
+        for jetski in jetskis:
+            jetski.travel()
+            if math.sqrt((abs(jetski.getX() - player.getX())**2 + (abs(jetski.getY() - player.getY())**2))) < player_hitbox:
+                game_objects.remove(jetski)
+                jetskis.remove(jetski)
                 
                 
                 
@@ -86,8 +123,10 @@ class App:
 
         #Draw UI
         font = pygame.font.SysFont("helvetica", 40)
-        text2 = font.render("Raketer: " + str(player.get_ammo()), False, (0, 0, 0))
-        theApp.screen.blit(text2,(0,0))
+        ammo_text = font.render("Raketer: " + str(player.get_ammo()), False, (0, 0, 0))
+        score_text = font.render("Poäng: " + str(score), False, (0, 0, 0))
+        theApp.screen.blit(ammo_text,(0,0))
+        theApp.screen.blit(score_text,(0,50))
         
             
         pygame.display.flip()
@@ -109,42 +148,29 @@ class App:
 
         pygame.display.set_caption("JetskiHater")
 
-
-        #Add all possible enemy spawnpoints into one array
-        #This could be made into separate function to look neat
-        spawn_points = []
-        
-        for i in range(-spawn_margin, theApp.width + spawn_margin):
-            spawn_points.append((i, -spawn_margin))
-            
-        for i in range(-spawn_margin, theApp.width + spawn_margin):
-            spawn_points.append((i, theApp.height+spawn_margin))
-
-        for i in range(-spawn_margin, theApp.height + spawn_margin):
-            spawn_points.append((-spawn_margin, i))
-
-        for i in range(-spawn_margin, theApp.height + spawn_margin):
-            spawn_points.append((theApp.height+spawn_margin, i))
-        #All possible spawnpoints added
+        spawn_points = generate_spawnpoints()
 
         
-        ammo_regen = 0
+        game_timer = 0
         
         while( self.running ):
             for event in pygame.event.get():
                 self.on_event(event)
             self.key_check()
-            self.move_bullets()
+            self.move_items()
             
-            if ammo_regen == refill_rate:
+            if game_timer % refill_rate == 0:
                 player.add_ammo()
-                ammo_regen = 0
+
+            if game_timer == spawn_rate:
+                spawn_jetski(spawn_points, jetski_speed)
+                game_timer = 0
                 
             self.on_loop()
             self.on_render()
             fps_clock.tick(fps)
             
-            ammo_regen += 1
+            game_timer += 1
             
         self.on_cleanup()
         
@@ -237,16 +263,33 @@ class Bullet(Game_Object):
         texture = pygame.image.load("Bullet.png")
         self.speed = bullet_speed
         self.direction = direction
-
-        self.bull_array_placement = 0
-        self.game_array_placement = 0
+        
         super().__init__(x,y,texture,gamespace)
         
     def travel(self):
         super().setX(self.x_position - self.speed*(math.sin(math.radians(self.direction))))
         super().setY(self.y_position - self.speed*(math.cos(math.radians(self.direction))))
         
+        
+class Jetski(Game_Object):
+    def __init__(self, x, y, gamespace, speed):
+        texture = pygame.image.load("TestEnemy.png")
+        self.speed = speed
+        
+        super().__init__(x,y,texture,gamespace)
 
+        self.direction = math.degrees(math.atan((player.getX()-self.x_position)/(player.getY()-self.y_position)))
+
+        print(self.direction)
+        print(self.x_position)
+        print(self.y_position)
+        print("______")
+        print(abs(player.getX()-self.x_position))
+        print(abs(player.getY()-self.y_position))
+
+    def travel(self):
+        super().setX(self.x_position + self.speed*(math.sin(math.radians(self.direction))))
+        super().setY(self.y_position + self.speed*(math.cos(math.radians(self.direction))))
 
 
 
