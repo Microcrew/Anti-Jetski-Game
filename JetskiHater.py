@@ -28,17 +28,28 @@ jetski_speed = (100 + score)/10
 
 def generate_spawnpoints():
     spawn_points = []
+
+    #TODO
+    #Optimise this function
         
     for i in range(-spawn_margin, theApp.width + spawn_margin):
+        if i == player.x_position:
+            continue
         spawn_points.append((i, -spawn_margin))
             
     for i in range(-spawn_margin, theApp.width + spawn_margin):
+        if i == player.x_position:
+            continue
         spawn_points.append((i, theApp.height+spawn_margin))
 
     for i in range(-spawn_margin, theApp.height + spawn_margin):
+        if i == player.y_position:
+            continue
         spawn_points.append((-spawn_margin, i))
 
     for i in range(-spawn_margin, theApp.height + spawn_margin):
+        if i == player.y_position:
+            continue
         spawn_points.append((theApp.width+spawn_margin, i))
 
     return spawn_points
@@ -49,6 +60,8 @@ def spawn_jetski(spawn_points, speed):
     new_jetski = Jetski(spawn_points[array_place][0], spawn_points[array_place][1], theApp, speed)
     jetskis.append(new_jetski)
     game_objects.append(new_jetski)
+    
+    
     
     
 
@@ -151,7 +164,7 @@ class App:
         spawn_points = generate_spawnpoints()
 
         
-        game_timer = 0
+        game_timer = 100
         
         while( self.running ):
             for event in pygame.event.get():
@@ -278,14 +291,14 @@ class Jetski(Game_Object):
         
         super().__init__(x,y,texture,gamespace)
 
-        self.direction = math.degrees(math.atan((player.getX()-self.x_position)/(player.getY()-self.y_position)))
+        
+        if self.x_position < theApp.width/2:
+            self.direction = (90 - ((math.degrees(math.atan((player.getY()-self.y_position)/(player.getX()-self.x_position))))%360))%360
+        else:
+            self.direction = (270 - ((math.degrees(math.atan((player.getY()-self.y_position)/(player.getX()-self.x_position))))%360))%360
 
-        print(self.direction)
-        print(self.x_position)
-        print(self.y_position)
-        print("______")
-        print(abs(player.getX()-self.x_position))
-        print(abs(player.getY()-self.y_position))
+         
+            
 
     def travel(self):
         super().setX(self.x_position + self.speed*(math.sin(math.radians(self.direction))))
