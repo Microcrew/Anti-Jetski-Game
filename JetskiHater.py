@@ -13,18 +13,34 @@ jetskis = []
 fps = 60
 fps_clock = pygame.time.Clock()
 
-bullet_speed = 4
-turn_speed = 2
+bullet_speed = 5
+turn_speed = 3
 spawn_margin = 10
 clip_size = 5
-refill_rate = 100
-spawn_rate = 200
-player_hitbox = 10
+refill_rate = 25
+spawn_rate = 100
+player_hitbox = 25
+bullet_hitbox = 10
+jetski_hitbox = 10
 
 
 score = 0
-jetski_speed = (100 + score)/10
+jetski_speed_base = 60
+jetski_speed_modifier = 20
+jetski_speed = (jetski_speed_base + score)/jetski_speed_modifier
 
+
+
+
+
+
+def rotate_texture(texture, texture_name, rotation, x_position, y_position):
+    old_texture = texture
+    new_texture = pygame.transform.rotate(pygame.image.load(texture_name), rotation)
+    new_rect = new_texture.get_rect(center = old_texture.get_rect(center = (x_position, y_position)).center)
+    
+    return new_rect, new_texture
+    
 
 def generate_spawnpoints():
     spawn_points = []
@@ -105,12 +121,15 @@ class App:
 
 
 
-    def move_items(self):
+    def update_items(self):
         for bullet in bullets:
+            
             bullet.travel()
             if (bullet.getX() < -spawn_margin or bullet.getX() > theApp.width + spawn_margin or bullet.getY() < -spawn_margin or bullet.getY() > theApp.height + spawn_margin):
                 game_objects.remove(bullet)
                 bullets.remove(bullet)
+
+            bullet.hit_detection()
 
         for jetski in jetskis:
             jetski.travel()
@@ -164,18 +183,20 @@ class App:
         spawn_points = generate_spawnpoints()
 
         
-        game_timer = 100
+        game_timer = 0
         
         while( self.running ):
             for event in pygame.event.get():
                 self.on_event(event)
             self.key_check()
-            self.move_items()
+            self.update_items()
             
             if game_timer % refill_rate == 0:
                 player.add_ammo()
 
             if game_timer == spawn_rate:
+                jetski_speed = (jetski_speed_base + score)/jetski_speed_modifier
+                print(jetski_speed)
                 spawn_jetski(spawn_points, jetski_speed)
                 game_timer = 0
                 
@@ -193,7 +214,7 @@ class Game_Object:
     def __init__(self, x, y, texture, gamespace):
         self.x_position = x
         self.y_position = y
-        self.texture = texture
+        self.texture = pygame.image.load(texture)
         self.gamespace = gamespace
         self.rect = None
 
@@ -223,43 +244,43 @@ class Game_Object:
 class Player(Game_Object):
     global playertexture
     def __init__(self, x, y, gamespace):
-        playertexture = pygame.image.load("Duck_for_game.png")
-        super().__init__(x,y, playertexture, gamespace)
+        self.player_texture = "Duck_for_game.png"
+        super().__init__(x,y, self.player_texture, gamespace)
         
-        self.rotation = 0
+        self.direction = 0
         self.ammo = clip_size
+        
+        self.rect, self.texture = rotate_texture(self.texture, self.player_texture, self.direction, self.x_position, self.y_position)
         
 
     def turn_right(self):
-        self.rotation -= turn_speed
-        if self.rotation > 360:
-            self.rotation = self.rotation - 360
+        self.direction -= turn_speed
+        if self.direction > 360:
+            self.direction = self.direction - 360
 
-        elif self.rotation < 0:
-            self.rotation = self.rotation + 360
+        elif self.direction < 0:
+            self.direction = self.direction + 360
+
+        self.rect, self.texture = rotate_texture(self.texture, self.player_texture, self.direction, self.x_position, self.y_position)
             
-        old_texture = self.texture
-        self.texture = pygame.transform.rotate(pygame.image.load("Duck_for_game.png"), self.rotation)
-        new_rect = self.texture.get_rect(center = old_texture.get_rect(center = (self.x_position, self.y_position)).center)
-        self.rect = new_rect
+        
 
     def turn_left(self):
-        self.rotation += turn_speed
-        if self.rotation > 360:
-            self.rotation = self.rotation - 360
+        self.direction += turn_speed
+        if self.direction > 360:
+            self.direction = self.direction - 360
 
-        elif self.rotation < 0:
-            self.rotation = self.rotation + 360
+        elif self.direction < 0:
+            self.direction = self.direction + 360
+
+        self.rect, self.texture = rotate_texture(self.texture, self.player_texture, self.direction, self.x_position, self.y_position)
             
-        old_texture = self.texture
-        self.texture = pygame.transform.rotate(pygame.image.load("Duck_for_game.png"), self.rotation)
-        new_rect = self.texture.get_rect(center = old_texture.get_rect(center = (self.x_position, self.y_position)).center)
-        self.rect = new_rect
+    
         
     def shoot(self):
         if self.ammo > 0:
             self.ammo -= 1
-            new_bullet = Bullet(self.x_position, self.y_position, self.gamespace, self.rotation)
+            new_bullet = Bullet(self.x_position, self.y_position, self.gamespace, self.direction)
             bullets.append(new_bullet)
             game_objects.append(new_bullet)
 
@@ -273,36 +294,54 @@ class Player(Game_Object):
 
 class Bullet(Game_Object):
     def __init__(self, x, y, gamespace, direction):
-        texture = pygame.image.load("Bullet.png")
+        self.bullet_texture = "Bullet.png"
         self.speed = bullet_speed
         self.direction = direction
         
-        super().__init__(x,y,texture,gamespace)
+        super().__init__(x,y,self.bullet_texture,gamespace)
+
+        self.rect, self.texture = rotate_texture(self.texture, self.bullet_texture, self.direction, self.x_position, self.y_position)
         
     def travel(self):
         super().setX(self.x_position - self.speed*(math.sin(math.radians(self.direction))))
         super().setY(self.y_position - self.speed*(math.cos(math.radians(self.direction))))
+        self.rect, self.texture = rotate_texture(self.texture, self.bullet_texture, self.direction, self.x_position, self.y_position)
+
+    def hit_detection(self):
+        removed_self = False 
+        for jetski in jetskis:
+            if bullet_hitbox + jetski_hitbox > math.sqrt((jetski.getX() - self.getX())**2 + (jetski.getY() - self.getY())**2):
+                if not removed_self:
+                    game_objects.remove(self)
+                    bullets.remove(self)
+                    removed_self = True
+                
+                game_objects.remove(jetski)                
+                jetskis.remove(jetski)
+                global score
+                score += 1
         
         
 class Jetski(Game_Object):
     def __init__(self, x, y, gamespace, speed):
-        texture = pygame.image.load("TestEnemy.png")
+        self.jetski_texture = "TestEnemy.png"
         self.speed = speed
         
-        super().__init__(x,y,texture,gamespace)
+        super().__init__(x,y,self.jetski_texture,gamespace)
 
         
         if self.x_position < theApp.width/2:
-            self.direction = (90 - ((math.degrees(math.atan((player.getY()-self.y_position)/(player.getX()-self.x_position))))%360))%360
-        else:
             self.direction = (270 - ((math.degrees(math.atan((player.getY()-self.y_position)/(player.getX()-self.x_position))))%360))%360
+        else:
+            self.direction = (90 - ((math.degrees(math.atan((player.getY()-self.y_position)/(player.getX()-self.x_position))))%360))%360
 
          
             
 
     def travel(self):
-        super().setX(self.x_position + self.speed*(math.sin(math.radians(self.direction))))
-        super().setY(self.y_position + self.speed*(math.cos(math.radians(self.direction))))
+        super().setX(self.x_position - self.speed*(math.sin(math.radians(self.direction))))
+        super().setY(self.y_position - self.speed*(math.cos(math.radians(self.direction))))
+        self.rect, self.texture = rotate_texture(self.texture, self.jetski_texture, self.direction, self.x_position, self.y_position)
 
 
 
