@@ -31,6 +31,37 @@ jetski_speed = (jetski_speed_base + score)/jetski_speed_modifier
 
 
 
+def loss_screen():
+
+    #Fill screen, optional, depends on if you want to see the last frame or not
+    theApp.screen.fill((0,94,184))
+
+    font_large = pygame.font.SysFont("helvetica", 100)
+    font_small = pygame.font.SysFont("helvetica", 50)
+
+    loss_text = font_large.render("Du förlorade, din poäng var: " + str(score), False, (0, 0, 0))
+    continue_text = font_small.render("Tryck Mellanslag för att börja om eller ESC för att avsluta", False, (0, 0, 0))
+
+    loss_text_rect = loss_text.get_rect()
+    continue_text_rect = continue_text.get_rect()
+
+    loss_text_rect.center = ((theApp.width/2), (theApp.height/2.5))
+    continue_text_rect.center = ((theApp.width/2), (theApp.height/1.8))
+    
+    theApp.screen.blit(loss_text,loss_text_rect)
+    theApp.screen.blit(continue_text,continue_text_rect)
+    
+    pygame.display.flip()
+
+    while(True):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                theApp.on_cleanup()
+                return
+            elif (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
+                theApp.on_restart()
+                return
+        
 
 
 
@@ -74,8 +105,7 @@ def generate_spawnpoints():
 def spawn_jetski(spawn_points, speed):
     array_place = random.randint(0, len(spawn_points)-1)
     new_jetski = Jetski(spawn_points[array_place][0], spawn_points[array_place][1], theApp, speed)
-    jetskis.append(new_jetski)
-    game_objects.append(new_jetski)
+    
     
     
     
@@ -115,9 +145,9 @@ class App:
         
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RIGHT]:
-            game_objects[0].turn_right()
+            player.turn_right()
         elif keys[pygame.K_LEFT]:
-            game_objects[0].turn_left()
+            player.turn_left()
 
 
 
@@ -134,8 +164,10 @@ class App:
         for jetski in jetskis:
             jetski.travel()
             if math.sqrt((abs(jetski.getX() - player.getX())**2 + (abs(jetski.getY() - player.getY())**2))) < player_hitbox:
-                game_objects.remove(jetski)
-                jetskis.remove(jetski)
+                loss_screen()
+                
+                #game_objects.remove(jetski)
+                #jetskis.remove(jetski)
                 
                 
                 
@@ -167,7 +199,28 @@ class App:
         
     def on_cleanup(self):
         pygame.quit()
+
+    def on_restart(self):
+        while bullets:
+            bullets.pop(0)
+
+        while jetskis:
+            jetskis.pop(0)
+
+        while game_objects:
+            game_objects.pop(0)
+                
+
+        global score
+        score = 0
+
+        global player
+        player = Player((theApp.width/2), (theApp.height/2), theApp)
         
+        
+        
+                
+                
  
     def on_execute(self):
         if self.on_init() == False:
@@ -175,8 +228,6 @@ class App:
 
         global player
         player = Player((theApp.width/2), (theApp.height/2), theApp)
-        
-        game_objects.append(player)
 
         pygame.display.set_caption("JetskiHater")
 
@@ -196,7 +247,6 @@ class App:
 
             if game_timer == spawn_rate:
                 jetski_speed = (jetski_speed_base + score)/jetski_speed_modifier
-                print(jetski_speed)
                 spawn_jetski(spawn_points, jetski_speed)
                 game_timer = 0
                 
@@ -217,6 +267,8 @@ class Game_Object:
         self.texture = pygame.image.load(texture)
         self.gamespace = gamespace
         self.rect = None
+
+        game_objects.append(self)
 
     def draw(self):
         if self.rect == None:
@@ -281,8 +333,7 @@ class Player(Game_Object):
         if self.ammo > 0:
             self.ammo -= 1
             new_bullet = Bullet(self.x_position, self.y_position, self.gamespace, self.direction)
-            bullets.append(new_bullet)
-            game_objects.append(new_bullet)
+            
 
     def add_ammo(self):
         if self.ammo < clip_size:
@@ -290,6 +341,9 @@ class Player(Game_Object):
 
     def get_ammo(self):
         return self.ammo
+
+    def set_direction(self, new_direction):
+        self.direction = new_direction
         
 
 class Bullet(Game_Object):
@@ -297,6 +351,8 @@ class Bullet(Game_Object):
         self.bullet_texture = "Bullet.png"
         self.speed = bullet_speed
         self.direction = direction
+
+        bullets.append(self)
         
         super().__init__(x,y,self.bullet_texture,gamespace)
 
@@ -326,6 +382,8 @@ class Jetski(Game_Object):
     def __init__(self, x, y, gamespace, speed):
         self.jetski_texture = "TestEnemy.png"
         self.speed = speed
+
+        jetskis.append(self)
         
         super().__init__(x,y,self.jetski_texture,gamespace)
 
