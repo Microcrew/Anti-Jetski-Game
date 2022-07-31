@@ -29,6 +29,8 @@ jetski_speed_base = 60
 jetski_speed_modifier = 20
 jetski_speed = (jetski_speed_base + score)/jetski_speed_modifier
 
+jetski_textures = ["Jetski_Red.png", "Jetski_Yellow.png", "Jetski_Green.png"]
+
 
 
 def loss_screen():
@@ -182,8 +184,9 @@ class App:
 
         
         #Draw all Game Objects
-        for gameobject in game_objects:
-            gameobject.draw()
+        #running top down, because the player is always the 0th element and the player should always be on top of the ammunition
+        for game_object in game_objects[::-1]:
+            game_object.draw()
 
         #Draw UI
         font = pygame.font.SysFont("helvetica", 40)
@@ -296,7 +299,7 @@ class Game_Object:
 class Player(Game_Object):
     global playertexture
     def __init__(self, x, y, gamespace):
-        self.player_texture = "Duck_for_game.png"
+        self.player_texture = "Placeholder_Canon.png"
         super().__init__(x,y, self.player_texture, gamespace)
         
         self.direction = 0
@@ -380,7 +383,7 @@ class Bullet(Game_Object):
         
 class Jetski(Game_Object):
     def __init__(self, x, y, gamespace, speed):
-        self.jetski_texture = "TestEnemy.png"
+        self.jetski_texture = random.choice(jetski_textures)
         self.speed = speed
 
         jetskis.append(self)
